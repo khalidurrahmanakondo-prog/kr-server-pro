@@ -1,37 +1,52 @@
 async function addNewDownload() {
-    const url = document.getElementById('url-input').value;
-    if(!url) return alert(isEn ? "Paste link first!" : "লিঙ্ক দিন!");
+    const urlInput = document.getElementById('url-input');
+    const url = urlInput.value.trim();
     
+    if(!url) {
+        alert(isEn ? "Please paste a valid video link!" : "দয়া করে একটি সঠিক লিঙ্ক দিন!");
+        return;
+    }
+    
+    // ডাউনলোড লিস্টে যুক্ত করা
     const dlId = Math.floor(1000 + Math.random() * 9000);
-    activeDownloads.push({ id: dlId, status: isEn ? "Connecting..." : "সার্ভারে যুক্ত হচ্ছে...", progress: 15 });
+    activeDownloads.push({ 
+        id: dlId, 
+        status: isEn ? "Connecting to KR Engine..." : "KR ইঞ্জিনে যুক্ত হচ্ছে...", 
+        progress: 25 
+    });
     renderDownloadList();
+    
+    // ডাউনলোড ম্যানেজার ট্যাবে নিয়ে যাওয়া
     tab('dl-manager', document.querySelectorAll('.nav-link')[1]);
-    document.getElementById('url-input').value = "";
+    urlInput.value = ""; // ইনপুট বক্স খালি করা
 
-    // আপনার Render এর লিঙ্ক এখানে বসান
-    const myApiUrl = `https://kr-downloader-api.onrender.com/download?url=${encodeURIComponent(url)}`;
+    // আপনার রেন্ডার সার্ভারের সঠিক লিঙ্ক
+    const myApiUrl = `https://kr-server-pro.onrender.com/download?url=${encodeURIComponent(url)}`;
 
     try {
         const response = await fetch(myApiUrl);
+        if (!response.ok) throw new Error('Server limit or error');
+        
         const data = await response.json();
 
         if (data.status === "success" && data.url) {
-            updateDLProgress(dlId, 50, isEn ? "Streaming File..." : "ফাইল পাওয়া গেছে...");
+            updateDLProgress(dlId, 100, isEn ? "Ready to Save!" : "ডাউনলোড করার জন্য প্রস্তুত!");
             
-            // সরাসরি ডাউনলোড শুরু করা
-            const a = document.createElement('a');
-            a.href = data.url;
-            a.download = `${data.title}.mp4`;
-            a.target = "_blank";
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
+            // অটোমেটিক ডাউনলোড ট্রিগার (মোবাইল ও পিসি উভয়ের জন্য)
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.href = data.url;
+            downloadAnchor.setAttribute('download', (data.title || 'KR_Video') + '.mp4');
+            downloadAnchor.target = "_blank";
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            document.body.removeChild(downloadAnchor);
 
             finishDL(dlId, data.url);
         } else {
-            failDL(dlId, isEn ? "Video Private or Blocked" : "ভিডিওটি পাওয়া যাচ্ছে না");
+            failDL(dlId, isEn ? "Video is private or restricted" : "ভিডিওটি পাওয়া যায়নি বা ব্লক করা");
         }
     } catch (e) {
-        failDL(dlId, isEn ? "Server Timed Out" : "সার্ভার রেসপন্স করছে না");
+        console.error("Download Error:", e);
+        failDL(dlId, isEn ? "Server error - Try again" : "সার্ভার এরর - আবার চেষ্টা করুন");
     }
 }
