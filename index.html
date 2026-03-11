@@ -1,0 +1,37 @@
+async function addNewDownload() {
+    const url = document.getElementById('url-input').value;
+    if(!url) return alert(isEn ? "Paste link first!" : "লিঙ্ক দিন!");
+    
+    const dlId = Math.floor(1000 + Math.random() * 9000);
+    activeDownloads.push({ id: dlId, status: isEn ? "Connecting..." : "সার্ভারে যুক্ত হচ্ছে...", progress: 15 });
+    renderDownloadList();
+    tab('dl-manager', document.querySelectorAll('.nav-link')[1]);
+    document.getElementById('url-input').value = "";
+
+    // আপনার Render এর লিঙ্ক এখানে বসান
+    const myApiUrl = `https://kr-downloader-api.onrender.com/download?url=${encodeURIComponent(url)}`;
+
+    try {
+        const response = await fetch(myApiUrl);
+        const data = await response.json();
+
+        if (data.status === "success" && data.url) {
+            updateDLProgress(dlId, 50, isEn ? "Streaming File..." : "ফাইল পাওয়া গেছে...");
+            
+            // সরাসরি ডাউনলোড শুরু করা
+            const a = document.createElement('a');
+            a.href = data.url;
+            a.download = `${data.title}.mp4`;
+            a.target = "_blank";
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+
+            finishDL(dlId, data.url);
+        } else {
+            failDL(dlId, isEn ? "Video Private or Blocked" : "ভিডিওটি পাওয়া যাচ্ছে না");
+        }
+    } catch (e) {
+        failDL(dlId, isEn ? "Server Timed Out" : "সার্ভার রেসপন্স করছে না");
+    }
+}
